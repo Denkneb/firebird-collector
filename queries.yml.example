@@ -1,0 +1,6 @@
+tablename:
+  query: >
+    SELECT * FROM tablename 
+    WHERE tablename.id > '%d'
+    LIMIT '%s';
+  enabled: true
