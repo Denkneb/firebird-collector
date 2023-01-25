@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"time"
 
 	_ "github.com/nakagami/firebirdsql"
 
@@ -42,10 +41,6 @@ type Query struct {
 	Query   string
 	Enabled bool
 }
-
-const (
-	YYYYMMDDHHMMSS = "2006-01-02 15:04:05"
-)
 
 func (config *Config) ConfigLoad(filename string) error {
 	err := godotenv.Load(filename)
@@ -113,11 +108,7 @@ func (app *App) Setup() error {
 }
 
 func (app *App) Run() error {
-	log.Printf(
-		"App started for server '%s', datetime '%s'",
-		app.Config.Uuid,
-		time.Now().Format(YYYYMMDDHHMMSS),
-	)
+	log.Printf("App started for server '%s'", app.Config.Uuid)
 
 	var tables []string
 	for tableName, query := range app.Queries.Queries {
@@ -126,10 +117,14 @@ func (app *App) Run() error {
 		}
 		tables = append(tables, tableName)
 	}
-	tablesData := handlers.LastIds(app.Config.ApiHost, handlers.TablesRequest{
+	tablesData, err := handlers.LastIds(app.Config.ApiHost, handlers.TablesRequest{
 		TablesName: tables,
 		Uuid:       app.Config.Uuid,
 	})
+	if err != nil {
+		log.Printf("Failed getting LastIds with error %s" , err)
+		return nil
+	}
 
 	for tableName, query := range app.Queries.Queries {
 		if query.Enabled != true {
@@ -142,16 +137,24 @@ func (app *App) Run() error {
 		log.Printf("Start query data for tableName '%s' with lastId - '%d'", tableName, lastId)
 
 		queryFormated := fmt.Sprintf(query.Query, lastId, app.Config.LIMIT)
-		queryData := handlers.DBExecute(app.DB, queryFormated)
+		queryData, err := handlers.DBExecute(app.DB, queryFormated)
+		if err != nil {
+			log.Printf("Failed query with error %s" , err)
+			return nil
+		}
 		queryJson, err := json.Marshal(queryData)
 		if err != nil {
 			log.Printf("Error with query data for tableName '%s' with lastId - '%d'", tableName, lastId)
 		}
 
-		tableData := handlers.SendTableData(app.Config.ApiHost, handlers.TableRequest{
+		tableData, err := handlers.SendTableData(app.Config.ApiHost, handlers.TableRequest{
 			Uuid: app.Config.Uuid,
 			Data: queryJson,
 		})
+		if err != nil {
+			log.Printf("Failed sendding table data with error %s", err)
+			return nil
+		}
 		if tableData.Status != 200 {
 			log.Println("SendTableData failed")
 		} else {
@@ -160,11 +163,7 @@ func (app *App) Run() error {
 
 	}
 
-	log.Printf(
-		"App finished for server '%s', datetime '%s'",
-		app.Config.Uuid,
-		time.Now().Format(YYYYMMDDHHMMSS),
-	)
+	log.Printf("App finished for server '%s'", app.Config.Uuid)
 
 	return nil
 }

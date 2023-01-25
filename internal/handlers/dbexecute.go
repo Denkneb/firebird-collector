@@ -2,13 +2,12 @@ package handlers
 
 import (
 	"database/sql"
-	"log"
 )
 
-func DBExecute(db sql.DB, query string) []map[string]interface{} {
+func DBExecute(db sql.DB, query string) ([]map[string]interface{}, error) {
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 	cols, _ := rows.Columns()
 
@@ -21,7 +20,7 @@ func DBExecute(db sql.DB, query string) []map[string]interface{} {
 		}
 		
 		if err := rows.Scan(columnPointers...); err != nil {
-			log.Fatalln(err)
+			return nil, err
 		}
 	
 		row := make(map[string]interface{})
@@ -33,5 +32,5 @@ func DBExecute(db sql.DB, query string) []map[string]interface{} {
 		result = append(result, row)
 	}
 
-	return result
+	return result, nil
 }

@@ -28,37 +28,37 @@ type TableResponse struct {
 	Status int         `json:"status"`
 }
 
-func LastIds(host string, data TablesRequest) TablesResponse {
+func LastIds(host string, data TablesRequest) (*TablesResponse, error) {
 	res, err := http.Get(host + "api/get_last_ids/")
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
-	var tablesData TablesResponse
+	var tablesData *TablesResponse
 	err = json.NewDecoder(res.Body).Decode(&tablesData)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	} else {
 		log.Println("Got last ids")
 	}
 
-	return tablesData
+	return tablesData, nil
 }
 
-func SendTableData(host string, data TableRequest) TableResponse {
+func SendTableData(host string, data TableRequest) (*TableResponse, error) {
 	postBody, _ := json.Marshal(data)
 	responseBody := bytes.NewBuffer(postBody)
 
 	res, err := http.Post(host+"api/accept_data/", "application/json", responseBody)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
-	var tableData TableResponse
+	var tableData *TableResponse
 	err = json.NewDecoder(res.Body).Decode(&tableData)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
-	return tableData
+	return tableData, nil
 }
